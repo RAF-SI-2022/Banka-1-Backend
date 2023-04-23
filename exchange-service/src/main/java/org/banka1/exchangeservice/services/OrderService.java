@@ -127,7 +127,12 @@ public class OrderService {
 //    @Async
     public void mockExecutionOfOrder(Order order, String token) {
         Runnable runnable = () -> {
-            UserListingDto userListingDto = getUserListing(order.getUserId(), order.getListingType(), order.getListingSymbol(), token);
+            UserListingDto userListingDto;
+            try {
+                userListingDto = getUserListing(order.getUserId(), order.getListingType(), order.getListingSymbol(), token);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             if(userListingDto == null) {
                 UserListingCreateDto userListingCreateDto = new UserListingCreateDto();
                 userListingCreateDto.setSymbol(order.getListingSymbol());
@@ -180,7 +185,11 @@ public class OrderService {
                     bidPrice = forex.getBidPrice();
                 } else if (order.getListingType() == ListingType.STOCK) {
                     Stock stock = stockRepository.findBySymbol(order.getListingSymbol());
-                    stockService.updateStocks(Collections.singletonList(stock));
+                    try {
+                        stockService.updateStocks(Collections.singletonList(stock));
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
 
                     askPrice = stock.getPrice();
                     bidPrice = stock.getPrice();
@@ -306,7 +315,7 @@ public class OrderService {
         return orders;
     }
 
-    private UserListingDto getUserListing(Long userId, ListingType listingType, String symbol, String token) {
+    private UserListingDto getUserListing(Long userId, ListingType listingType, String symbol, String token) throws InterruptedException {
         String url = userServiceUrl + "/user-listings?userId=" + userId;
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(url))
@@ -323,8 +332,10 @@ public class OrderService {
                     .filter(ul -> ul.getListingType() == listingType && ul.getSymbol().equals(symbol))
                     .findFirst()
                     .orElse(null);
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException e) {
             throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            throw new InterruptedException();
         }
 
         return userListingDto;

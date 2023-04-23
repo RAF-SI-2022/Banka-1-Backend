@@ -48,7 +48,7 @@ public class StockService {
         this.stockRepository = stockRepository;
     }
 
-    public void loadStocks() {
+    public void loadStocks() throws InterruptedException {
         FileReader fileReader;
         try {
             fileReader = new FileReader(ResourceUtils.getFile("exchange-service/csv-files/stocks_test.csv"));
@@ -84,8 +84,10 @@ public class StockService {
             StockResponseDtoFlask stockResponseDtoFlask;
             try {
                 stockResponseDtoFlask = getStockFromFlask(symbol, TimeSeriesStockEnum.DAILY);
-            } catch (IOException | InterruptedException e) {
+            } catch (IOException e) {
                 throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new InterruptedException();
             }
             if (stockResponseDtoFlask == null)
                 continue;
@@ -98,6 +100,7 @@ public class StockService {
         }
 
         try {
+            csvParser.close();
             reader.close();
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -105,7 +108,7 @@ public class StockService {
         stockRepository.saveAll(stocksToSave);
     }
 
-    public void updateStocks(List<Stock> stocksToCheckForUpdate) {
+    public void updateStocks(List<Stock> stocksToCheckForUpdate) throws InterruptedException {
         LocalDateTime now = LocalDateTime.now();
 
         List<Stock> stocks = new ArrayList<>();
@@ -118,8 +121,10 @@ public class StockService {
                         updateStockFromFlask(stock,stockResponseDtoFlask);
                         stocks.add(stock);
                     }
-                } catch (IOException | InterruptedException e) {
+                } catch (IOException e) {
                     throw new RuntimeException(e);
+                } catch (InterruptedException e) {
+                    throw new InterruptedException();
                 }
             }
         }
@@ -135,7 +140,11 @@ public class StockService {
             stocks = stockRepository.getAllBySymbolContainsIgnoreCase(symbol, PageRequest.of(page, size, Sort.by("symbol").ascending()));
         }
 
-        updateStocks(stocks.getContent());
+        try {
+            updateStocks(stocks.getContent());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
         return stocks;
     }
 

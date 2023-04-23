@@ -103,7 +103,7 @@ public class ForexService {
         }
     }
 
-    public void loadForex() {
+    public void loadForex() throws InterruptedException {
         FileReader fileReader;
         try {
             fileReader = new FileReader(ResourceUtils.getFile("exchange-service/csv-files/forex-pair-test.csv"));
@@ -142,8 +142,10 @@ public class ForexService {
             ForexResponseExchangeFlask forexResponseExchangeFlask = null;
             try {
                 forexResponseExchangeFlask = getForexFromFlask(url, ForexResponseExchangeFlask.class);
-            } catch (IOException | InterruptedException e) {
+            } catch (IOException e) {
                 throw new RuntimeException(e);
+            } catch (InterruptedException e) {
+                throw new InterruptedException();
             }
 
             Forex forex = new Forex();
@@ -157,6 +159,7 @@ public class ForexService {
         }
 
         try {
+            csvParser.close();
             reader.close();
         } catch (IOException e) {
             throw new RuntimeException(e);

@@ -25,9 +25,14 @@ presubmits:
 
               docker compose --profile exchange up -d
 
-              git branch $PULL_HEAD_REF
+              branch=$PULL_HEAD_REF
+              curr_branch=$(git rev-parse --abbrev-ref HEAD)
+              if [[ "$branch" == "$curr_branch" ]]; then
+                branch="$PULL_HEAD_REF"-1
+              fi
+              git branch $branch
               git reset --hard HEAD~1
-              git checkout $PULL_HEAD_REF
+              git checkout $branch
 
               cd "$SERVICE_NAME"
 
