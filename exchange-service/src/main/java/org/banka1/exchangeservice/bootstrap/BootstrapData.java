@@ -56,12 +56,16 @@ public class BootstrapData implements CommandLineRunner {
         System.out.println("Options loaded");
     }
 
-    public List<CurrencyCsvBean> getCurrencies() throws IOException {
+    public List<CurrencyCsvBean> getCurrencies() {
         FileReader fileReader;
         try {
             fileReader = new FileReader(ResourceUtils.getFile("exchange-service/csv-files/currencies.csv"));
         } catch (Exception e) {
-            fileReader = new FileReader(ResourceUtils.getFile("classpath:csv/currencies.csv"));
+            try {
+                fileReader = new FileReader(ResourceUtils.getFile("classpath:csv/currencies.csv"));
+            } catch (FileNotFoundException ex) {
+                throw new RuntimeException(ex);
+            }
         }
 
         return new CsvToBeanBuilder<CurrencyCsvBean>(fileReader)
@@ -71,12 +75,16 @@ public class BootstrapData implements CommandLineRunner {
                 .parse();
     }
 
-    public List<ExchangeCSV> getExchangeData() throws FileNotFoundException {
+    public List<ExchangeCSV> getExchangeData() {
         FileReader fileReader;
         try {
             fileReader = new FileReader(ResourceUtils.getFile("exchange-service/csv-files/exchange.csv"));
         } catch (Exception e) {
-            fileReader = new FileReader(ResourceUtils.getFile("classpath:csv/exchange.csv"));
+            try {
+                fileReader = new FileReader(ResourceUtils.getFile("classpath:csv/exchange.csv"));
+            } catch (FileNotFoundException ex) {
+                throw new RuntimeException(ex);
+            }
         }
 
         return new CsvToBeanBuilder<ExchangeCSV>(fileReader)

@@ -48,18 +48,32 @@ public class StockService {
         this.stockRepository = stockRepository;
     }
 
-    public void loadStocks() throws IOException, InterruptedException {
+    public void loadStocks() {
         FileReader fileReader;
         try {
             fileReader = new FileReader(ResourceUtils.getFile("exchange-service/csv-files/stocks_test.csv"));
         } catch (Exception e) {
-            fileReader = new FileReader(ResourceUtils.getFile("classpath:csv/stocks_test.csv"));
+            try {
+                fileReader = new FileReader(ResourceUtils.getFile("classpath:csv/stocks_test.csv"));
+            } catch (FileNotFoundException ex) {
+                throw new RuntimeException(ex);
+            }
         }
 
         BufferedReader reader = new BufferedReader(fileReader);
-        CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withIgnoreHeaderCase().withTrim());
+        CSVParser csvParser;
+        try {
+            csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withIgnoreHeaderCase().withTrim());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-        List<CSVRecord> csvRecords = csvParser.getRecords();
+        List<CSVRecord> csvRecords;
+        try {
+            csvRecords = csvParser.getRecords();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
         Exchange exchange = exchangeRepository.findByExcAcronym("NASDAQ");
         List<Stock> stocksToSave = new ArrayList<>();
@@ -67,7 +81,12 @@ public class StockService {
         for(CSVRecord record: csvRecords) {
             String symbol = record.get("symbol");
 
-            StockResponseDtoFlask stockResponseDtoFlask = getStockFromFlask(symbol, TimeSeriesStockEnum.DAILY);
+            StockResponseDtoFlask stockResponseDtoFlask;
+            try {
+                stockResponseDtoFlask = getStockFromFlask(symbol, TimeSeriesStockEnum.DAILY);
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
             if (stockResponseDtoFlask == null)
                 continue;
 
@@ -76,6 +95,12 @@ public class StockService {
             stock.setSymbol(symbol);
             updateStockFromFlask(stock,stockResponseDtoFlask);
             stocksToSave.add(stock);
+        }
+
+        try {
+            reader.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         stockRepository.saveAll(stocksToSave);
     }

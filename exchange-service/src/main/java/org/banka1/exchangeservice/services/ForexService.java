@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.ResourceUtils;
 
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.net.URI;
@@ -102,18 +103,32 @@ public class ForexService {
         }
     }
 
-    public void loadForex() throws Exception {
+    public void loadForex() {
         FileReader fileReader;
         try {
             fileReader = new FileReader(ResourceUtils.getFile("exchange-service/csv-files/forex-pair-test.csv"));
         } catch (Exception e) {
-            fileReader = new FileReader(ResourceUtils.getFile("classpath:csv/forex-pair-test.csv"));
+            try {
+                fileReader = new FileReader(ResourceUtils.getFile("classpath:csv/forex-pair-test.csv"));
+            } catch (FileNotFoundException ex) {
+                throw new RuntimeException(ex);
+            }
         }
 
         BufferedReader reader = new BufferedReader(fileReader);
-        CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withIgnoreHeaderCase().withTrim());
+        CSVParser csvParser;
+        try {
+            csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withFirstRecordAsHeader().withIgnoreHeaderCase().withTrim());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
 
-        List<CSVRecord> csvRecords = csvParser.getRecords();
+        List<CSVRecord> csvRecords;
+        try {
+            csvRecords = csvParser.getRecords();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         List<Forex> forexesToSave = new ArrayList<>();
 
         Map<String, Currency> currencyMap = currencyRepository.findAll().stream()
@@ -124,7 +139,12 @@ public class ForexService {
             String to = record.get("to");
 
             String url = baseForexUrl + "?from_currency=" + from + "&to_currency=" + to;
-            ForexResponseExchangeFlask forexResponseExchangeFlask = getForexFromFlask(url, ForexResponseExchangeFlask.class);
+            ForexResponseExchangeFlask forexResponseExchangeFlask = null;
+            try {
+                forexResponseExchangeFlask = getForexFromFlask(url, ForexResponseExchangeFlask.class);
+            } catch (IOException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
 
             Forex forex = new Forex();
             forex.setFromCurrency(currencyMap.get(from));
@@ -136,6 +156,11 @@ public class ForexService {
             forexesToSave.add(forex);
         }
 
+        try {
+            reader.close();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
         forexRepository.saveAll(forexesToSave);
     }
 
