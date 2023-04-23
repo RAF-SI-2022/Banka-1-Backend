@@ -19,11 +19,7 @@ public class StockServiceTestsSteps extends StockServiceTestsConfig{
 
     @When("load stocks")
     public void load_stocks() {
-        try {
-            stockService.loadStocks();
-        } catch (IOException | InterruptedException e) {
-            fail(e.getMessage());
-        }
+        stockService.loadStocks();
     }
     @Then("return stock with given id")
     public void return_stock_with_given_id() {
