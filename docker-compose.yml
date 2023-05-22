@@ -81,6 +81,43 @@ services:
     restart: on-failure
     profiles: ["all", "contracts"]
 
+  db:
+    image: mysql
+    container_name: mysql_symfony_docker
+    restart: always
+    volumes:
+      - db-data:/var/lib/mysql
+    environment:
+      MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+    networks:
+      - dev
+
+  phpmyadmin:
+    image: phpmyadmin
+    container_name: phpmyadmin_symfony_docker
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - 8083:80
+    environment:
+      - PMA_ARBITRARY=1
+
+  www:
+    build: php
+    container_name: www_symfony_docker
+    ports:
+      - 8741:80
+    volumes:
+      - ./php/vhosts:/etc/apache2//sites-enabled
+      - ./:/var/www
+    networks:
+      - dev
+
+networks:
+  dev:
+
 volumes:
   mysql-db:
   mongo-db:
+  db-data:
